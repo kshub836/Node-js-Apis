@@ -5,6 +5,36 @@ const vendor = require("../controllers/vendorControler");
 
 // const swagger = require("swagger.json")
 // const upload = require("../middleware/multer")
+userRouter.post("/User", user.User);
+const multer= require('multer');
+const path= require('path');
+const {CloudinaryStorage} = require("multer-storage-cloudinary")
+
+var bodyParser = require('body-parser');
+userRouter.use(bodyParser.urlencoded({ extended: true }));
+userRouter.use(bodyParser.json());
+const cloudinary = require("cloudinary").v2
+
+cloudinary.config({
+  cloud_name: "dyjr7uu2w",
+  api_key: "428354248675467",
+  api_secret: "XXbxFALkCag_RPCijDy5xpsLgR0",
+  secure: true,
+});
+
+
+const upload = multer({ 
+  storage:new CloudinaryStorage({
+          cloudinary: cloudinary,
+          params: {
+            folder: "DEV",
+           //format: async (req, file) => 'jpg'
+          },
+        })
+});
+  //const upload = multer({storage:storage}),
+
+
 
  /**
  * @swagger
@@ -19,7 +49,40 @@ const vendor = require("../controllers/vendorControler");
  *       - name: firstName                
  *         description: 
  *         in: formData
- *         required: true,      
+ *         required: true,
+ *       - name: lastName                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: userName                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: email                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: mobileNumber                
+ *         description: 
+ *         in: formData
+ *         required: true,       
+ *       - name: password                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: confirmPassword                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: dateOfBirth                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: address                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *                     
  *     responses:
  *       200:
  *         description: Sign Up successfully
@@ -40,10 +103,15 @@ const vendor = require("../controllers/vendorControler");
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: mobileEmail                
  *         description: 
  *         in: formData
- *         required: true,      
+ *         required: true, 
+ *       - name: password                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *      
  *     responses:
  *       200:
  *         description: Login successfully
@@ -118,7 +186,11 @@ userRouter.patch("/update/:id", user.updatePassword);
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: email                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: password                
  *         description: 
  *         in: formData
  *         required: true,      
@@ -143,7 +215,7 @@ userRouter.put("/resetpassword", user.resetPassword);
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: email                
  *         description: 
  *         in: formData
  *         required: true,      
@@ -168,7 +240,7 @@ userRouter.post("/forgot-password", user.forgotpassword);
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: email                
  *         description: 
  *         in: formData
  *         required: true,      
@@ -192,11 +264,7 @@ userRouter.post("/resendotp", user.resendOtp);
  *     description: User List api Docs
  *     produces:
  *       - application/json
- *     parameters:
- *       - name: firstName                
- *         description: 
- *         in: formData
- *         required: true,      
+ *     parameters:         
  *     responses:
  *       200:
  *         description: Successfull
@@ -207,34 +275,8 @@ userRouter.post("/resendotp", user.resendOtp);
  */
 userRouter.get("/Userlist",user.Userlist);
 
-
- /**
- * @swagger
- * /app/v1/user/editProfile:
- *   post:
- *     tags: 
- *       - User      
- *     description:Edit Profile api Docs
- *     produces:
- *       - application/json
- *     parameters:
- *       - name: firstName                
- *         description: 
- *         in: formData
- *         required: true,      
- *     responses:
- *       200:
- *         description: Successfull
- *       404:
- *         description: Data not found
- *       500:
- *         description: Internal Server Error
- */
+ 
 userRouter.post("/editProfile", auth.verifyToken,user.editProfile);
-
-userRouter.get("/paginate",user.paginate);
-userRouter.get("/QRCode",user.QRCode);
-
 
  /**
  * @swagger
@@ -242,14 +284,18 @@ userRouter.get("/QRCode",user.QRCode);
  *   post:
  *     tags: 
  *       -  Admin      
- *     description:Admin Login api Docs
+ *     description: Admin Login api Docs
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: email                
  *         description: 
  *         in: formData
- *         required: true,      
+ *         required: true, 
+ *       - name: password                
+ *         description: 
+ *         in: formData
+ *         required: true,       
  *     responses:
  *       200:
  *         description: Successfull
@@ -266,14 +312,22 @@ userRouter.post("/adminlogin", user.adminLogin);
  *   put:
  *     tags: 
  *       - Admin      
- *     description:Admin Edit Profile api Docs
+ *     description: Admin Edit Profile api Docs
  *     produces:
  *       - application/json
  *     parameters:
  *       - name: firstName                
  *         description: 
  *         in: formData
- *         required: true,      
+ *         required: true,
+ *       - name: lastName                 
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: mobileNumber                 
+ *         description: 
+ *         in: formData
+ *         required: true,       
  *     responses:
  *       200:
  *         description: Successfull
@@ -291,11 +345,15 @@ userRouter.put("/adminEditProfile", auth.verifyToken,user.adminEditProfile);
  *   get:
  *     tags: 
  *       - Admin      
- *     description:Vendor Pending List api Docs
+ *     description: Vendor Pending List api Docs
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: approvalStatus                
+ *         description: 
+ *         in: formData
+ *         required: true, 
+ *       - name: userType                
  *         description: 
  *         in: formData
  *         required: true,      
@@ -315,11 +373,11 @@ userRouter.get("/vendorPendingList", auth.verifyToken,user.vendorPendingList);
  *   post:
  *     tags: 
  *       - Admin      
- *     description:Vendor Pending Approval api Docs
+ *     description:  Vendor Pending Approval api Docs
  *     produces:
  *       - application/json
  *     parameters:
- *       - name: firstName                
+ *       - name: email                
  *         description: 
  *         in: formData
  *         required: true,      
@@ -332,55 +390,190 @@ userRouter.get("/vendorPendingList", auth.verifyToken,user.vendorPendingList);
  *         description: Internal Server Error
  */
 userRouter.post("/vendorPendingApproval", auth.verifyToken,user.vendorPendingApproval); 
-userRouter.get('/userlistApi',user.userlistApi)
 
-
-
-userRouter.post('/vendorCreate', vendor.vendorCreate);
-userRouter.post('/vendorLogin',vendor.vendorLogin)
-userRouter.put("/vendorEditPassword", auth.verifyToken, vendor.vendorEditPassword);
-// userRouter.post('/vendorPopulate', vendor.vendorPopulate); 
 
 /**
-components:
-  schema:
-    Order:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 10       
-        status:
-          type: string
-          description: Order Status
-          example: approved
-          enum:
-            - placed
-            - approved
-            - delivered
-        complete:
-          type: boolean
+ * @swagger
+ * /app/v1/user/QRCode:
+ *   post:
+ *     tags: 
+ *       - User      
+ *     description: QR Code generator api Docs
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: firstName                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: userName                
+ *         description: 
+ *         in: formData
+ *         required: true, 
+ *       - name: mobileNumber                
+ *         description: 
+ *         in: formData
+ *         required: true,     
+ *     responses:
+ *       200:
+ *         description: Successfull
+ *       404:
+ *         description: Data not found
+ *       500:
+ *         description: Internal Server Error
  */
+userRouter.get("/QRCode",user.QRCode);
+
+userRouter.get('/userlistApi',user.userlistApi)
+
+userRouter.get("/paginate",user.paginate);
 
 
 
-userRouter.post("/User", user.User);
-const multer= require('multer');
-const path= require('path');
-const {CloudinaryStorage} = require("multer-storage-cloudinary")
+ /**
+ * @swagger
+ * /app/v1/user/vendorCreate:
+ *   post:
+ *     tags: 
+ *       - Vendor      
+ *     description:  Vendor Create api Docs
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: vendorName                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: email                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: address                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: pincode                
+ *         description: 
+ *         in: formData
+ *         required: true, 
+ *       - name: mobileNumber                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: userType                
+ *         description: 
+ *         in: formData
+ *         required: true,    
+ *     responses:
+ *       200:
+ *         description: Successfull
+ *       404:
+ *         description: Data not found
+ *       500:
+ *         description: Internal Server Error
+ */
+userRouter.post('/vendorCreate',upload.single('image'), vendor.vendorCreate);
 
-var bodyParser = require('body-parser');
-userRouter.use(bodyParser.urlencoded({ extended: true }));
-userRouter.use(bodyParser.json());
-const cloudinary = require("cloudinary").v2
+ /**
+ * @swagger
+ * /app/v1/user/vendorOtpVerification:
+ *   post:
+ *     tags: 
+ *       - Vendor      
+ *     description:  Vendor OTP Verification api Docs
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: email                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: otp                
+ *         description: 
+ *         in: formData
+ *         required: true,          
+ *     responses:
+ *       200:
+ *         description: Successfull
+ *       404:
+ *         description: Data not found
+ *       500:
+ *         description: Internal Server Error
+ */
+userRouter.post('/vendorOtpVerification', vendor.vendorOtpVerification);
 
-cloudinary.config({
-  cloud_name: "dyjr7uu2w",
-  api_key: "428354248675467",
-  api_secret: "XXbxFALkCag_RPCijDy5xpsLgR0",
-  secure: true,
-});
+ /**
+ * @swagger
+ * /app/v1/user/vendorLogin:
+ *   post:
+ *     tags: 
+ *       - Vendor      
+ *     description:  Vendor Login api Docs
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: email                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: password                
+ *         description: 
+ *         in: formData
+ *         required: true,          
+ *     responses:
+ *       200:
+ *         description: Successfull
+ *       404:
+ *         description: Data not found
+ *       500:
+ *         description: Internal Server Error
+ */
+userRouter.post('/vendorLogin',vendor.vendorLogin)
+
+
+ /**
+ * @swagger
+ * /app/v1/user/vendorEditPassword:
+ *   post:
+ *     tags: 
+ *       - Vendor      
+ *     description:  Vendor Edit api Docs
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: password                
+ *         description: 
+ *         in: formData
+ *         required: true,
+ *       - name: confirmPassword                
+ *         description: 
+ *         in: formData
+ *         required: true,          
+ *     responses:
+ *       200:
+ *         description: Successfull
+ *       404:
+ *         description: Data not found
+ *       500:
+ *         description: Internal Server Error
+ */
+userRouter.put("/vendorEditPassword", auth.verifyToken, vendor.vendorEditPassword);
+
+// userRouter.post("/logout", auth.isVendorLogin, vendor.vendorLogout);
+
+
+
+
+
+
+// userRouter.post('/vendorPopulate', vendor.vendorPopulate); 
+
+//
+  //  userRouter.post('/searchApi', user.searchApi); 
+
+
+
+
 
 // const storage = new CloudinaryStorage({
 //     cloudinary: cloudinary,
@@ -389,16 +582,9 @@ cloudinary.config({
 //     },
 //   });
 
-//   const upload = multer{storage:storage}
+  // const upload = multer{storage:storage}
 
-  const upload = multer({ 
-    storage:new CloudinaryStorage({
-            cloudinary: cloudinary,
-            params: {
-              folder: "DEV",
-            },
-          })
-});
+  
 
 
 // multer setup
@@ -416,8 +602,9 @@ cloudinary.config({
 // });
 
 
-userRouter.post("/upload",upload.array("file"),(req,res)=>{
-    return res.json({ picture: req.file.path });
+userRouter.post("/upload",upload.single("photo"),(req,res)=>{
+    return res.json({responseMessage: "Image uploaded Successfully",
+    responseCode: 200, photo: req.file.path });
 })
 
 

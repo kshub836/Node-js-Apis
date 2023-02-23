@@ -28,7 +28,12 @@ const user = new Schema({
   email: {
     type: String,
     // required: true,
-  },  
+  }, 
+   
+  image: {
+    type: String,
+    // required: true,
+  }, 
   password: {
     type: String,
     // required: true,
@@ -110,22 +115,23 @@ mongoose.model("user", user)
     } else if (result.length != 0) {
       console.log("Default Admin........................................",);
     } else {
-      let otppass = otp.generateOTP();
+      //let otppass = otp.generateOTP();
       let hashPassword = hashSync("Shubham@123", 10);
 
       let admin = {
         userName: "shubham_kumar",
-        firstName: "Shubham",
-        lastName: "Kumar",
+        //firstName: "Shubham",
+        //lastName: "Kumar",
         email: "Shubham.kumar@mailinator.com",
         password: hashPassword,
-        countryCode: "+91",
-        mobileNumber: "7985919618",
-        dateOfBirth: "12/11/2002",
-        otp: otppass,
-        address: "Delhi",
+        //countryCode: "+91",
+        //mobileNumber: "7985919618",
+        //dateOfBirth: "12/11/2002",
+        //otp: otppass,
+        //address: "Delhi",
         userType: "Admin",
-        OtpVerification: true,
+        approvalStatus:"Approve",
+        //OtpVerification: true,
       };
 
       mongoose.model("user", user).create(admin, (err1, result1) => {

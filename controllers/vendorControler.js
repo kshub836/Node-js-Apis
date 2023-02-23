@@ -1,4 +1,5 @@
 const userModel = require("../model/user");
+const nodemailerFunction = require("../helper/nodemailerFunction")
 
 const nodemailer = require("nodemailer");
 const otp = require("../helper/common");
@@ -11,14 +12,21 @@ const Joi = require("joi");
 
 
 module.exports = {
+  
   vendorCreate: async (req, res) => {
-    const schema = {
-      vendorName:Joi.string().require()
-    }
 
-    try {
-      let validBody = await Joi.Validate(req.body,schema);
-      const userData = await userModel.findOne({ email: validBody.email });
+    const schema = Joi.object().keys({ 
+      vendorName: Joi.string().min(3).max(30).required(),
+      email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }),
+      address:Joi.string().min(3).max(50).required(),
+      pincode:Joi.string().length(6).pattern(/^[0-9]+$/).required(),        
+      mobileNumber:Joi.string().length(10).pattern(/^[0-9]+$/).required(),
+      userType: Joi.string().min(3).max(10).required(),
+    });     
+   schema.validateAsync(req.body);          
+    try {     
+   
+      const userData = await userModel.findOne({ email:req.body.email });
       if (userData) {
         // return res.send(errorCode.Internal_Server_Error());
         // console.log(userData);
@@ -26,35 +34,57 @@ module.exports = {
           responseMessage: "This vendor is already exist..",
           responseCode: 200,
         });
-      } else {
-        validBody.otp = otp.generateOTP();
+      } else {  
+        
+        req.body.otp = otp.generateOTP();
 
         /* Adding Curent Time for OTP Verification...*/
-        validBody.otpTime = Date.now() + 180000;
+        req.body.otpTime = Date.now() + 180000;
 
-        let mailDetails = {
-          from: "Shubham.kumar@mailinator.com",
-          to: req.body.email,
-          subject: "Vendor signup successfully",
-          text: "Thank You For contacting us. We will back Soon",
-        };
-        nodemailer
-          .createTransport({
-            service: "gmail",
-            auth: {
-              user: "kshubh8604@gmail.com",
-              pass: "ssruulevuyoniehi",
-            },
-          })
-          .sendMail(mailDetails, (err) => {
-            if (err) {
-              return console.log("error", err);
-            } else {
-              return console.log("Mail  sent! ");
-            }
-          });
+        let subject= "Vendor signup successfully"
+        let body =  "Thank You For contacting us. We will back Soon."
+        let send = await nodemailerFunction.sendMail(req.body.email, subject, body);
 
-        const user_data = await userModel(validBody).save();
+        // Mailinator
+        // let mailDetails = {
+        //   from: "Shubham.kumar@mailinator.com",
+        //   to: req.body.email,
+        //   subject: "Vendor signup successfully",
+        //   text: "Thank You For contacting us. We will back Soon",
+        // };
+        // nodemailer
+        //   .createTransport({
+        //     service: "gmail",
+        //     auth: {
+        //       user: "kshubh8604@gmail.com",
+        //       pass: "ssruulevuyoniehi",
+        //     },
+        //   })
+        //   .sendMail(mailDetails, (err) => {
+        //     if (err) {
+        //       return console.log("error", err);
+        //     } else {
+        //       return console.log("Mail  sent! ");
+        //     }
+        //   });
+         
+if(send){
+          const vendorData = await userModel({
+            vendorName: req.body.vendorName,
+            email: req.body.email,
+            mobileNumber: req.body.mobileNumber,
+            address: req.body.address,
+            image: req.file.path,
+            // image_1:req.file.filename,
+            // image2: req.file.path,
+            pincode: req.body.pincode,
+            userType:req.body.userType,
+            otp:req.body.otp,
+            otpTime:req.body.otpTime,        
+           
+          });         
+
+        const user_data = await vendorData.save();
         if (user_data) {
           return res.status(200).send({
             responseMessage: "Vendor Created Successfully",
@@ -70,8 +100,9 @@ module.exports = {
           });
         }
       }
+      }
     } catch (error) {
-      console.log(error.message);
+      console.log(error);
       return res.status(501).send({
         responseMessage: "Not Implemented",
         responseCode: 501,
@@ -79,100 +110,88 @@ module.exports = {
       });
     }
   },
+// Vendor Otp Verification
 
-  //vendor Otp verification
+  vendorOtpVerification  : async (req, res) => {
+    const schema = Joi.object().keys({     
+      email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }),
+      otp:Joi.string().length(6).pattern(/^[0-9]+$/).required(),
+     
+    });     
+   schema.validateAsync(req.body);
+    try {
+      const userData = await userModel.findOne({ email: req.body.email });
+      if (!userData) {
+        // console.log("Email is not in Database..!!");
+        // return res.send(errorCode.Not_Found());
+        return res.status(404).send({
+          responseMessage: "Email is not in database..!!",
+          responseCode: 404,
+        });
+      } else {
+        if (userData.otp == req.body.otp) {
+          /* Compair OTP at real time...!! */
+          if (userData.otpTime >= Date.now()) {
+            if (userData.OtpVerification == false) {
+              const user_data = await userModel.findByIdAndUpdate(
+                { _id: userData.id },
+                { $set: { OtpVerification: true } },
+                { new: true }
+              );
 
-  // OtpVerification: (req, res) => {
-  //   try {
-  //     userModel.findOne({ business_email: req.body.business_email }, (err, result) => {
-  //       if (err) {
-  //         // console.log("Email is not in Database..!!");
-  //         // return res.send(errorCode.Not_Found());
-  //         return res.status(404).send({
-  //           responseMessage: "business_email is not in database..!!",
-  //           responseCode: 404,
-  //         });
-  //       } else {
-  //         if (result.otp == req.body.otp) {
-  //           /* Compair OTP at real time...!! */
-  //           if (result.otpTime >= Date.now()) {
-  //             if (result.OtpVerification == false) {
-  //               userModel.findByIdAndUpdate(
-  //                 { _id: result.id },
-  //                 { OtpVerification: true },
-  //                 async (err) => {
-  //                   if (err) {
-  //                     // return res.send(errorCode.Not_Found());
-  //                     return res.status(500).send({
-  //                       responseMessage: "failed",
-  //                       responseCode: 500,
-  //                       err: err,
-  //                     });
-  //                   } else {
-  //                     // return res.send(errorCode.Success() );
-  //                     return res.status(200).send({
-  //                       responseMessage: "success",
-  //                       responseCode: 200,
-  //                       result,
-  //                     });
-  //                   }
-  //                 }
-  //               );
-  //             } else {
-  //               return res.status(401).send({
-  //                 responseMessage: "Otp verified already..!!",
-  //                 responseCode: 401,
-  //               });
-  //             }
-  //           } else {
-  //             return res.status(401).send({
-  //               responseMessage: "Otp time expired..!!",
-  //               responseCode: 401,
-  //             });
-  //           }
-  //         } else {
-  //           return res.status(401).send({
-  //             responseMessage: " Invalid Otp!!",
-  //             responseCode: 401,
-  //           });
-  //         }
-  //       }
-  //     });
-  //   } catch (error) {
-  //     return res.status(500).send({
-  //       responseMessage: "Internal server error",
-  //       responseCode: 500,
-  //       result: {},
-  //     });
-  //   }
-  // },
-
-  // vendorPopulate: (req, res) => {
-  //   userModel
-  //     .find({ _id: req.body.vendor_id }, (err, store) => {
-  //       if (!store) {
-  //         return res.status(404).send({
-  //           responseMessage: "Vendor not found",
-  //           responseCode: 404,
-  //           err,
-  //         });
-  //       } else {
-  //         // console.log(user)
-  //         res.status(200).send({
-  //           responseMessage: "Vendor Details",
-  //           responseCode: 200,
-  //           store,
-  //         });
-  //       }
-  //     })
-  //     .populate("vendor_id");
-  // },
-
+              if (!user_data) {
+                // return res.send(errorCode.Not_Found());
+                return res.status(500).send({
+                  responseMessage: "failed",
+                  responseCode: 500,
+                });
+              } else {
+                // return res.send(errorCode.Success() );
+                return res.status(200).send({
+                  responseMessage: "success",
+                  responseCode: 200,
+                  user_data,
+                });
+              }
+            } else {
+              return res.status(401).send({
+                responseMessage: "Otp verified already..!!",
+                responseCode: 401,
+              });
+            }
+          } else {
+            return res.status(401).send({
+              responseMessage: "Otp time expired..!!",
+              responseCode: 401,
+            });
+          }
+        } else {
+          return res.status(401).send({
+            responseMessage: " Invalid Otp!!",
+            responseCode: 401,
+          });
+        }
+      }
+    } catch (error) {
+      console.log(error.message);
+      return res.status(500).send({
+        responseMessage: "Internal server error",
+        responseCode: 500,
+      });
+    }
+  },
+  
   // // Vendor Login
 
   vendorLogin: async (req, res) => {
+    const schema = Joi.object().keys({     
+      email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }),
+      password:Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required()
+     
+    });     
+   schema.validateAsync(req.body);
     try {
-      const userData = await userModel.findOne({ email: req.body.email });
+      const userData = await userModel.findOne({$and:[{ email:req.body.email,userType:"Vendor" }]});
       // console.log(userData);
       if (userData) {
         if ((approvalStatus = "Approve")) {
@@ -220,6 +239,13 @@ module.exports = {
   // // Vendor prassword update
 
   vendorEditPassword: async (req, res) => {
+    const schema = Joi.object().keys({     
+      password:Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
+      confirmPassword:Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required()
+     
+    });     
+   schema.validateAsync(req.body);
+
     try {
       let vendorData = await userModel.findOne({ _id: req.userId });
       if (!vendorData) {

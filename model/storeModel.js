@@ -1,30 +1,32 @@
 const { Schema, model } = require("mongoose");
 
-const store = new Schema({  
-    
+const store = new Schema({
+  vendorId:{
+    type:String,      
+ },    
     storeName:{
-      type:String,  
-      
+      type:String,      
    },
-    logo:{
-      type:String,  
-
-   },
-    business_email:{
-        type:String,
-     },  
+   businessEmail:{
+    type:String,
+   },  
+    image:{
+      type:String, 
+   },   
+   image_1:{
+    type:String, 
+ },   
      password:{
       type:String,
    },          
     address: {
-        type: String,      
+        type: String,   
         
       },
     pincode:{
         type:String,    
         
-      },
-    
+      },    
       approvalStatus:{
         type:String,
         enum:["Approve", "Pending", "Reject"],

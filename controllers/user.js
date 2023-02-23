@@ -16,6 +16,7 @@ var springedge = require("springedge");
 
 const storeModel = require("../model/storeModel");
 var randomstring = require("randomstring");
+const { default: mongoose } = require("mongoose");
 
 module.exports = {
   // api development
@@ -68,11 +69,11 @@ module.exports = {
         //   .then((message) => console.log(message.sid));
 
         var params = {
-          apikey: "6on957rb36978j0rl148a6j226v03jmr", // API Key
-          sender: "SEDEMO", // Sender Name
-          to: req.body.mobileNumber, //Moblie Number
-          message: `${req.body.otp}`,
-          format: "json",
+         " apikey": "6on957rb36978j0rl148a6j226v03jmr", // API Key
+          "sender": "SEDEMO", // Sender Name
+          "to": req.body.mobileNumber, //Moblie Number
+          "message": "Hello, This is a test message from spring edge,req.body.otp",
+          "format": "json",
         };
 
         springedge.messages.send(params, 5000, function (err, response) {
@@ -301,11 +302,17 @@ module.exports = {
           { email: mobileEmail },
           { mobileNumber: mobileEmail },
           { userName: mobileEmail },
+          //{userType:{$ne:"Admin"}}
+          //{$and:[{ email:req.body.email,userType:"Admin" }]}
         ],
       });
-
-      if (userData) {
-        if (userData.OtpVerification == true) {
+      if(userData.userType=="Admin"||userData.userType=="Vendor"){
+        return res.status(404).send({
+          responseCode: 404,
+          responseMessage: "User not found",
+        });
+      }else if (userData) {
+        if (userData.OtpVerification==true) {
           var check = bcrypt.compareSync(req.body.password, userData.password);
           if (check == false) {
             return res.status(403).send({
@@ -706,7 +713,7 @@ module.exports = {
     //     },
     //   });
 
-    const file = req.files.image;
+    const file = req.files.photo;
     console.log(file.tempFilePath);
     cloudinary.uploader.upload(file.tempFilePath, async (err, result) => {
       if (err) {
@@ -730,9 +737,12 @@ module.exports = {
   QRCode: (req, res) => {
     // Creating the data
     let data = {
-      firstName: req.body.firstName,
+      // firstName: req.body.firstName,
+      // lastName: req.body.lastName,
+      name: req.body.name,
       userName: req.body.userName,
       mobileNumber: req.body.mobileNumber,
+      email:req.body.email,
     };
 
     // Converting the data into String format
@@ -740,11 +750,23 @@ module.exports = {
 
     // Print the QR code to terminal
     QRCode.toString(stringdata, { type: "terminal" }, function (err, QRcode) {
-      if (err) return console.log("error occurred");
-
+      if (err) {
+        return res.status(404).send({
+          responseMessage: "No Data Found",
+          responseCode: 404,
+        });
+      }else{
+        console.log(QRcode);
+        return res.status(200).send({
+          responseMessage: "QR Generated successfully",
+          responseCode: 200,
+          Data: QRcode,
+        });
+       
+      }
       // Printing the generated code
-      console.log(QRcode);
-      console.log(data);
+      
+      //console.log(data);
     });
 
     // Converting the data into base64
@@ -849,12 +871,12 @@ module.exports = {
 
   // Admin Login
 
-  adminLogin: (req, res) => {
+  adminLogin: async (req, res) => {
     try {
-      userModel.findOne({ email: req.body.email }, (err, result) => {
-        if (result) {
-          if (result.OtpVerification == true) {
-            var check = bcrypt.compareSync(req.body.password, result.password);
+      let adminData = await userModel.findOne({$and:[{ email:req.body.email,userType:"Admin" }]})
+        if (adminData) {
+          // if (result.OtpVerification == true) {
+            var check = bcrypt.compareSync(req.body.password, adminData.password);
             if (check == false) {
               return res.status(403).send({
                 responseCode: 403,
@@ -862,7 +884,7 @@ module.exports = {
               });
             } else {
               token = jwt.sign(
-                { _id: result._id, email: result.email },
+                { _id: adminData._id, email: adminData.email },
                 "secretKey",
                 { expiresIn: "1H" }
               );
@@ -870,25 +892,27 @@ module.exports = {
                 responseMessage: "Login Success",
                 responseCode: 200,
                 token,
-                result,
+                adminData,
               });
             }
-          } else {
-            return res.status(401).send({
-              responseCode: 401,
-              responseMessage: "OTP verification pending....!!",
-            });
-          }
+          // }
+          //  else {
+          //   return res.status(401).send({
+          //     responseCode: 401,
+          //     responseMessage: "OTP verification pending....!!",
+          //   });
+          // }
         } else {
           return res.status(404).send({
             responseCode: 404,
             responseMessage: "User Not found...!!",
           });
         }
-      });
+      
     } catch (error) {
+      console.log(error)
       // return res.send(errorCode.Unauthorished() );
-      return res.status(501).send({
+      return res.status(501).send({        
         responseCode: 501,
         responseMessage: "Something went wrong",
         error: error,
@@ -928,7 +952,7 @@ module.exports = {
     }
   },
 
-  //vendor pending list
+  //Vendor pending list
 
   vendorPendingList: async (req, res) => {
     try {
@@ -971,7 +995,7 @@ module.exports = {
     }
   },
 
-  //Store pending approval
+  //Vendor pending approval
 
   vendorPendingApproval: async (req, res) => {
     try {
@@ -1042,7 +1066,7 @@ module.exports = {
           let newRamdom = hashSync(random, 10);
           let user_Data = await userModel.findByIdAndUpdate(
             { _id: userData._id },
-            { $set: { approvalStatus: "Approve", password: newRamdom } },
+            { $set: { approvalStatus: "Approve", password: newRamdom , userType:"Vendor"} },
             { new: true }
           );
 
@@ -1074,64 +1098,160 @@ module.exports = {
     }
   },
 
-  userlistApi: async (req, res) => {
+
+  userlistApi : async (req, res) => {
     try {
-      const { userType, page, limit, search } = req.body;
-      let query = { status: { $ne: "DELETE" } };
-      // words = userModel
-
+      const { status, userType, page, limit, firstName,otp, sort } = req.body;
+      let query = { status: { $ne: "Delete" } };
+      
+      // if (search) {
+      //   query.$or = [
+      //     { firstName: { $regex: search } },
+      //     { email: { $regex: search, $options: "i" } },
+      //   ];
+      // }
       if (userType) {
-        query.userType = userType;
+        query.userType = { $regex:".*"+userType+".*", $options:'i' };
       }
-      if (search) {
-        //  userModel.filter(data => data.length > 30);
-        query.$or = [
-          { firstName: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } },
-          // {match:{$regex:search, $options:"i"}}
-
-        ];
-        if (search) {
-        
-          query.$match = [
-            { firstName: { $regex: search, $options: "i" } },
-            { email: { $regex: search, $options: "i" } },
-          
+      if (firstName) {
+        query.firstName ={ $regex:".*"+firstName+".*", $options:'i' } 
+      } 
+      if(otp){
+        query.otp = { $regex: ".*"+otp+".*", $options:'i' }
+      }     
+      // if(country){
+      //   query.country = { $regex: ".*"+country+".*", $options:'i' }
+      // }
+      // if(state){
+      //   query.state = { $regex: ".*"+state+".*", $options:'i' }
+      // }
   
-          ];
-      }
-      if (userType == "Admin") {
-        return res.status(404).send({
-          status: "Failed",
-          responseMessage: "User not found",
-          responseCode: 404,
-        });
-      }
-
       let options = {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 10,
-        sort: { createdAt: -1 },
-        
+        sort:''
       };
-      var user_data = await userModel.paginate(query, options);
-      if (user_data.docs.length != 0) {
-        return res.status(200).send({
-          status: "success",
-          responseMessage: "User details",
-          responseCode: 200,
-          Data: user_data,
-        });
+      if (userType == "Vendor" || userType == "user") {
+        var userData = await userModel.paginate(query, options);
+        if ((userData.docs.length!= 0)) {
+          return res.send({
+            status: "Success",
+            responseCode: 200,
+            responseMessage: "User list fetched sucessfully.",
+            userData: userData,
+          });
+        } else {
+          return res.send({
+            status: "Error",
+            responseCode: 404,
+            responseMessage: "Data Not Foumd !...",
+          });
+        }
       } else {
         return res.status(404).send({
-          status: "success",
-          responseMessage: "User not found",
-          responseCode: 404,
+          status: "Error",
+          responseMessage:
+            "" + userType + " Is Not Valid Key Data Not Foumd !...",
         });
       }
     } catch (error) {
-      console.log("error", error);
-      res.status(501).send({ responseCode: "Something went Wrong..!!" });
+      console.log(error)
+      return res.status(500).send({
+        responseMessage: "Internal Server Error",
+        responseCode: 500,
+        error: error,
+      });
     }
   },
+  
+
+  // userlistApi: async (req, res) => {
+  //   try {
+  //     const { userType, page, limit, search } = req.body;
+  //     let query = { status: { $ne: "DELETE" },userType:{$ne:"Admin"} };
+  //     // words = userModel
+
+  //     if (userType) {
+  //       query.userType =userType;
+  //     }
+  //     if (search) {
+  //       //  userModel.filter(data => data.length > 30);
+  //       query.$or = [
+  //         { firstName: { $regex: search, $options: "i" } },
+  //         { email: { $regex: search, $options: "i" } },
+         
+  //       ];
+  //     }
+       
+  //       if (userType =="Admin") {
+  //         return res.status(404).send({
+  //           status: "Failed",
+  //           responseMessage: "User not found",
+  //           responseCode: 404,
+  //         });
+  //       }
+
+  //       let options = {
+  //         page: parseInt(page) || 1,
+  //         limit: parseInt(limit) || 10,
+  //         sort: { createdAt: -1 },
+  //       };
+  //       var user_data = await userModel.paginate(query, options, {userType:{$ne:"Admin"}});
+  //       if (user_data.docs.length != 0) {
+  //         return res.status(200).send({
+  //           status: "success",
+  //           responseMessage: "User details",
+  //           responseCode: 200,
+  //           Data: user_data,
+  //         });
+  //       } else {
+  //         return res.status(404).send({
+  //           status: "failed",
+  //           responseMessage: "User not found",
+  //           responseCode: 404,
+  //         });
+  //       }
+      
+  //   } catch (error) {
+  //     console.log("error", error);
+  //     res.status(501).send({ responseCode: "Something went Wrong..!!" });
+  //   }
+  // },
+
+  
+
+  // searchApi: async (req, res) => {
+  //   try {
+  //     let Data = await  Tokendata.users("users").aggregate(
+  //       { $group:{_id:"$email"} });
+      
+  //       if (!Data) {
+  //         // return res.send(errorCode.Internal_Server_Error() );
+  //         return res.status(404).send({
+  //           responseMessage: "Not Found",
+  //           responseCode: 404,
+  //         });
+  //       } else {
+  //         // console.log(result);
+  //         // return res.send(errorCode.Success() );
+  //         return res.status(200).send({
+  //           responseMessage: req.body.approvalStatus + " " + "list......",
+  //           responseCode: 200,
+  //           Data: userData,
+  //         });
+  //       }
+  //     }
+  //    catch (error) {
+  //     console.log(error.message);
+  //     // return res.send(errorCode.Internal_Server_Error() );
+  //     return res.status(501).send({
+  //       responseMessage: "Something went wrong",
+  //       responseCode: 501,
+  //       error: error,
+  //     });
+  //   }
+  // },
+
+
+
 };
